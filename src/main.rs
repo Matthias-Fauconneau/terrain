@@ -25,7 +25,10 @@ fn paint(&mut self, context/*@Context{device, memory_allocator, ..}*/: &Context,
 	let Self{height: _, view_position, yaw} = self;
 	
 	let terrain = Terrain::new(context)?;
-	let height = [Height{height: 0.},Height{height: 1./4.},Height{height: 2./4.},Height{height: 3./4.}];
+	let grid = vec![0,1,2,3];
+	let grid = buffer::<u32>(context, BufferUsage::INDEX_BUFFER, grid.len() as _, grid)?;
+	
+	let height = [Height{height: 1./4.},Height{height: 2./4.},Height{height: 3./4.},Height{height: 1.}];
 	let height : Subbuffer::<[Height]> = buffer(context, BufferUsage::VERTEX_BUFFER, height.len() as _, height)?;
 	
 	//*view_position += rotate(-*yaw, control);
@@ -37,7 +40,8 @@ fn paint(&mut self, context/*@Context{device, memory_allocator, ..}*/: &Context,
 					yaw_sincos: xy::from(yaw.sin_cos()).into()
 				})?;
 	commands.bind_vertex_buffers(0, height.clone())?;
-	unsafe{commands.draw(4, 1, 0, 0)}?;
+	commands.bind_index_buffer(grid.clone())?;
+	unsafe{commands.draw_indexed(grid.len() as _, 1, 0, 0, 0)}?;
 	commands.end_rendering()?;
 	Ok(())
 }
