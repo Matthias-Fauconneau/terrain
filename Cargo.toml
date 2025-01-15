@@ -18,8 +18,8 @@ vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano'  } # drm modifier
 [patch.crates-io] # In case vulkano-spirv would depend on crates-io version. But currently it tracks git version (breaking changes in vulkano::shader::spirv))
 vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano' } # drm modifier
 
-[patch.'https://github.com/Matthias-Fauconneau/ui'] # WIP vulkan helpers
-ui={ path='../ui' }
+#[patch.'https://github.com/Matthias-Fauconneau/ui'] # WIP vulkan helpers
+#ui={ path='../ui' }
 
-[patch.'https://github.com/Matthias-Fauconneau/vulkano-spirv'] # WIP SPIR-V to Rust interface
-vulkano-spirv={ path='../vulkano-spirv' }
+#[patch.'https://github.com/Matthias-Fauconneau/vulkano-spirv'] # WIP SPIR-V to Rust interface
+#vulkano-spirv={ path='../vulkano-spirv' }

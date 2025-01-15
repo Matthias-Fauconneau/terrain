@@ -61,7 +61,7 @@ fn paint(&mut self, context/*@Context{device, memory_allocator, ..}*/: &Context,
 fn main() -> Result {
 	let name = format!("{}.f32", std::env::args().skip(1).next().unwrap_or("data/DTM_R.tif.tif.exr".to_owned()));
 	ui::run(&name.clone(), Box::new(move |context| {
-			let height = std::env::current_dir()?.ancestors().find_map(|root| std::fs::read(root.join(&name)).ok() ).unwrap();
-			Ok(Box::new(App::new(context, bytemuck::cast_slice(&height))?))
+		let height = std::env::current_dir()?.ancestors().find_map(|root| std::fs::read(root.join(&name)).ok() ).expect(&name);
+		Ok(Box::new(App::new(context, bytemuck::cast_slice(&height))?))
 	}))
 }
