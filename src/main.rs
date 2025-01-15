@@ -1,14 +1,42 @@
 #![feature(slice_from_ptr_range)] // shader
-use ui::{Result, xy, uint2, int2, image::{self, bgr}, Image};
-use {std::sync::Arc, ui::vulkan::{Context, Commands, ImageView}};
+#![allow(incomplete_features)]#![feature(inherent_associated_types)] // shader uniforms
 
-ui::shader!{terrain, Terrain}
+use {ui::{Error, throws, Result, xy, uint2, int2, image::{self, bgr}, Image}, vector::vec2};
+use {std::sync::Arc, ui::vulkan::{Context, Commands, ImageView, buffer, Subbuffer, BufferUsage, BufferContents, Vertex}};
 
-struct App(Image<Box<[u32]>>); 
+#[derive(Clone, Copy, BufferContents, Vertex)] #[repr(C)] pub struct Height {
+	#[format(R32_SFLOAT)] pub height: f32
+}
+
+ui::shader!{terrain, Height, Terrain}
+
+struct App {
+	#[allow(dead_code)] height: Image<Box<[u32]>>,
+	view_position: vec2,
+	yaw: f32,
+}
+
+impl App {
+	#[throws] fn new(_context: &Context, height: Image<Box<[u32]>>) -> Self { Self{height, view_position: xy{x: 0., y: 0.}, yaw: 0.} }
+}
+
 impl ui::Widget for App {
 fn paint(&mut self, context/*@Context{device, memory_allocator, ..}*/: &Context, commands: &mut Commands, target: Arc<ImageView>, _: uint2, _: int2) -> Result<()> {
+	let Self{height: _, view_position, yaw} = self;
+	
 	let terrain = Terrain::new(context)?;
-	terrain.begin_rendering(context, commands, target.clone(), &[])?;
+	let height = [Height{height: 0.},Height{height: 1./4.},Height{height: 2./4.},Height{height: 3./4.}];
+	let height : Subbuffer::<[Height]> = buffer(context, BufferUsage::VERTEX_BUFFER, height.len() as _, height)?;
+	
+	//*view_position += rotate(-*yaw, control);
+	let size = {let [x,y,_] = target.image().extent(); xy{x,y}};
+			
+	terrain.begin_rendering(context, commands, target.clone(), &Terrain::Uniforms{
+					aspect_ratio: size.x as f32/size.y as f32,
+					view_position: (*view_position).into(),
+					yaw_sincos: xy::from(yaw.sin_cos()).into()
+				})?;
+	commands.bind_vertex_buffers(0, height.clone())?;
 	unsafe{commands.draw(4, 1, 0, 0)}?;
 	commands.end_rendering()?;
 	Ok(())
@@ -28,5 +56,5 @@ fn main() -> Result {
 		bgr{b: v, g: v, r: v}.into()
 	})); // 200ms
 	//println!("{}ms", start.elapsed().as_millis());
-	ui::run(&name, &mut App(image))
+	ui::run(&name, Box::new(move |context| Ok(Box::new(App::new(context, image)?))))
 }

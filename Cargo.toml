@@ -1,17 +1,22 @@
 package={ edition='2024', name='terrain' }
 
 [dependencies]
-ui={ git='https://github.com/Matthias-Fauconneau/ui '}
+ui={ git='https://github.com/Matthias-Fauconneau/ui' }
 vulkano={ git='https://github.com/vulkano-rs/vulkano', default-features=false } # same as ui (which needs drm modifier from git version)
 vulkano-spirv={ git='https://github.com/Matthias-Fauconneau/vulkano-spirv' }
 bytemuck='*'
+vector={ git='https://github.com/Matthias-Fauconneau/vector' }
+fehler='*'
 
 [build-dependencies]
-naga = {version='*', features = ['wgsl-in','spv-out']}
-bytemuck = {version='*'}
+naga={ version='*', features = ['wgsl-in','spv-out'] }
+bytemuck='*'
 
 [patch.'https://github.com/vulkano-rs/vulkano']
-vulkano={git='https://github.com/Matthias-Fauconneau/vulkano'} # drm modifier
+vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano'  } # drm modifier
 
 [patch.crates-io] # Make vulkano-spirv use same version
-vulkano={git='https://github.com/Matthias-Fauconneau/vulkano'} # drm modifier
+vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano' } # drm modifier
+
+[patch.'https://github.com/Matthias-Fauconneau/ui'] # WIP vulkan helpers
+ui={ path='../ui' }
