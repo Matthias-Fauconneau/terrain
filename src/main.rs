@@ -1,27 +1,22 @@
-#!/usr/bin/env -S cargo -Zscript
----cargo
-package={edition='2024'}
-dependencies={ui={git='https://github.com/Matthias-Fauconneau/ui'},bytemuck='*'}
-patch.'https://github.com/Matthias-Fauconneau/ui'={ui={path='../ui'}}
-[profile.dev]
-opt-level = 1
----
-#![feature(optimize_attribute)]
-use ui::{Result, xy, image::{self, bgr}, Image};
+#![feature(slice_from_ptr_range)] // shader
+use ui::{Result, uint2, int2, xy, image::{self, bgr}, Image};
+use {std::sync::Arc, ui::vulkan::{Context, Commands, ImageView}};
+
+ui::shader!{terrain, Terrain}
+
 struct App(Image<Box<[u32]>>); 
-impl ui::Widget for App { 
-	fn paint(&mut self, target: &mut ui::Target, _: ui::uint2, _: ui::int2) -> Result<()> {
-		let ref source = self.0;
-		for y in 0..target.size.y { 
-			for x in 0..target.size.x {
-				target[xy{x,y}] = source[xy{x: x*(source.size.x-1)/(target.size.x-1), y: y*(source.size.y-1)/(target.size.y-1)}]; 
-			}
-		}
-		Ok(())
-	}
+impl ui::Widget for App {
+fn paint(&mut self, context/*@Context{device, memory_allocator, ..}*/: &Context, commands: &mut Commands, target: Arc<ImageView>, _: uint2, _: int2) -> Result<()> {
+	let triangle = Triangle::new(context)?;
+	triangle.begin_rendering(context, commands, target.clone(), &[])?;
+	unsafe{commands.draw(4, 1, 0, 0)}?;
+	commands.end_rendering()?;
+	Ok(())
 }
-#[optimize(speed)] fn main() -> Result {
-	let dtm = std::env::args().skip(1).next().unwrap_or("data/DTM_R.tif.tif.exr".to_owned());
+}
+
+fn main() -> Result {
+	let terrain = std::env::args().skip(1).next().unwrap_or("data/DTM_R.tif.tif.exr".to_owned());
 	let mmap = format!("{dtm}.f32");
 	/*#[cfg(feature="exr")] if !std::fs::exists(&mmap)? {
 		let start = std::time::Instant::now();
@@ -40,5 +35,5 @@ impl ui::Widget for App {
 		bgr{b: v, g: v, r: v}.into()
 	})); // 200ms
 	//println!("{}ms", start.elapsed().as_millis());
-	ui::run(&dtm, &mut App(image)) 
+	ui::run(&terrain, &mut App(image))
 }
