@@ -12,11 +12,14 @@ fehler='*'
 naga={ version='*', features = ['wgsl-in','spv-out'] }
 bytemuck='*'
 
-[patch.'https://github.com/vulkano-rs/vulkano']
+[patch.'https://github.com/vulkano-rs/vulkano'] # Also switches vulkano dependency for vulkano-spirv to use same version
 vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano'  } # drm modifier
 
-[patch.crates-io] # Make vulkano-spirv use same version
+[patch.crates-io] # In case vulkano-spirv would depend on crates-io version. But currently it tracks git version (breaking changes in vulkano::shader::spirv))
 vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano' } # drm modifier
 
 [patch.'https://github.com/Matthias-Fauconneau/ui'] # WIP vulkan helpers
 ui={ path='../ui' }
+
+[patch.'https://github.com/Matthias-Fauconneau/vulkano-spirv'] # WIP SPIR-V to Rust interface
+vulkano-spirv={ path='../vulkano-spirv' }
