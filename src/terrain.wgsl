@@ -4,6 +4,7 @@ struct Uniforms { grid_size: vec2<u32>,  yaw_sincos: vec2<f32>, pitch_sincos: ve
 struct Vertex {
 	@location(0) height: f32,
 	@location(1) NdotL: f32,
+	@location(2) water: f32,
 }
 
 struct VertexOutput {
@@ -13,7 +14,7 @@ struct VertexOutput {
 
 @vertex fn vertex(@builtin(vertex_index) vertex_index: u32, vertex: Vertex) -> VertexOutput {
 	let xy = vec2(f32(vertex_index % uniforms.grid_size.x), f32(vertex_index / uniforms.grid_size.x)) / vec2<f32>(uniforms.grid_size);
-	let p = vec3(vec3(xy, 1.-vertex.height) * 2. - 1.);
+	let p = vec3(xy * 2. - 1., vertex.height);
 	let p0 = p.xy - uniforms.view_position;
 	let s = uniforms.yaw_sincos.x;
 	let c = uniforms.yaw_sincos.y;
@@ -21,7 +22,7 @@ struct VertexOutput {
 	let ps = uniforms.pitch_sincos.x;
 	let pc = uniforms.pitch_sincos.y;
 	let p2 = vec3(p1.x, pc*p1.y - ps*p1.z, ps*p1.y + pc*p1.z);
-	return VertexOutput(vec4(p2.xy, (p2.z+sqrt(2.))/(2.*sqrt(2.)) /*Vulkan clips z/w < 0*/, 1.), vec3(/*vertex.height**/vertex.NdotL));
+	return VertexOutput(vec4(p2.xy, (-p2.z+sqrt(2.))/(2.*sqrt(2.)) /*Vulkan clips z/w < 0*/, 1.), mix(vec3(59./60.,58./60.,57./60.),vec3(0.,0.,1.),vertex.water)*vertex.NdotL);
 }
 
 @fragment fn fragment(vertex_output: VertexOutput) -> @location(0) vec4<f32> {

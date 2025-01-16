@@ -1,3 +1,4 @@
+
 #![feature(slice_from_ptr_range)] // shader
 #![allow(incomplete_features)]#![feature(inherent_associated_types)] // shader uniforms
 #![allow(non_snake_case)] // NdotL
@@ -14,6 +15,7 @@ fn minmax(values: &[f32]) -> [f32; 2] {
 #[derive(Clone, Copy, BufferContents, Vertex)] #[repr(C)] pub struct TerrainVertex { 
 	#[format(R32_SFLOAT)] pub height: f32,
 	#[format(R32_SFLOAT)] pub NdotL: f32,
+	#[format(R32_SFLOAT)] pub water: f32,
 }
 
 ui::shader!{terrain, TerrainVertex, Terrain}
@@ -28,9 +30,11 @@ struct App {
 }
 
 impl App {
-	fn new(context: &Context, height: Image<impl AsRef<[f32]>>) -> Result<Self> {
-		let height = height.as_ref();
+	fn new(context: &Context, ground: Image<impl AsRef<[f32]>>, water: Image<impl AsRef<[f32]>>) -> Result<Self> {
+		let ground = ground.as_ref();
+		let water = water.as_ref();
 		
+		let ref height = water; // Single terrain for water/ground (`water` has ground altitude for points without water)
 		let size = height.size;
 		let vertex_stride = size.x;
 		let vertices = buffer(context, BufferUsage::VERTEX_BUFFER, height.data.len())?;
@@ -43,8 +47,9 @@ impl App {
 				let dy_z = (height[xy{x, y: y+1}]-height[xy{x, y: y-1}])/2.;
 				let n = normalize(cross(xyz{x: 1., y: 0., z: dx_z}, xyz{x: 0., y: 1., z: dy_z}));
 				vertices[(y*vertex_stride+x) as usize] = TerrainVertex{
-					height: (height[xy{x,y}]-min)/(max-min)/2.,
-					NdotL: dot(n, xyz{x: 0., y: 0., z: 1.})
+					height: (height[xy{x,y}]-min)/(max-min)/4.,
+					NdotL: dot(n, xyz{x: 0., y: 0., z: 1.}),
+					water: if water[xy{x,y}] > ground[xy{x,y}] { 1. } else { 0. }
 				};
 			}}
 		}
@@ -55,7 +60,8 @@ impl App {
 			let r2 = vector::sq(xy{x,y}.signed()-center) as u32;
 			if r2 >= radius2 { continue; }
 			let i0 = y*vertex_stride+x;
-			if [0, 1, vertex_stride, vertex_stride+1].iter().all(|di| height[(i0+di) as usize] > f32::MIN) { cell_count += 1; }
+			if [0, 1, vertex_stride, vertex_stride+1].iter().all(|di| height[(i0+di) as usize] > f32::MIN) {} else {continue;}
+			cell_count += 1;
 		}}
 		let grid = buffer(context, BufferUsage::INDEX_BUFFER, (cell_count*6) as usize)?;
 		{
@@ -65,15 +71,14 @@ impl App {
 				let r2 = vector::sq(xy{x,y}.signed()-center) as u32;
 				if r2 >= radius2 { continue; }
 				let i0 = y*vertex_stride+x;
-				if [0, 1, vertex_stride, vertex_stride+1].iter().all(|di| height[(i0+di) as usize] > f32::MIN) {
-					grid[target+0] = i0;
-					grid[target+1] = i0+1;
-					grid[target+2] = i0+vertex_stride+1;
-					grid[target+3] = i0;
-					grid[target+4] = i0+vertex_stride+1;
-					grid[target+5] = i0+vertex_stride;
-					target += 6;
-				}
+				if [0, 1, vertex_stride, vertex_stride+1].iter().all(|di| height[(i0+di) as usize] > f32::MIN) {} else {continue;}
+				grid[target+0] = i0;
+				grid[target+1] = i0+1;
+				grid[target+2] = i0+vertex_stride+1;
+				grid[target+3] = i0;
+				grid[target+4] = i0+vertex_stride+1;
+				grid[target+5] = i0+vertex_stride;
+				target += 6;
 			}}
 			assert!(target == grid.len());
 		}
@@ -100,7 +105,7 @@ fn paint(&mut self, context@Context{memory_allocator, ..}: &Context, commands: &
 	}, default())?;
 	terrain.begin_rendering(context, commands, target.clone(), ImageView::new_default(depth)?, &Terrain::Uniforms{
 		grid_size: (*size).into(),
-		pitch_sincos: xy::from((std::f32::consts::PI/4.).sin_cos()).into(),
+		pitch_sincos: xy::from((-std::f32::consts::PI/4.).sin_cos()).into(),
 		yaw_sincos: xy::from(yaw.sin_cos()).into(),
 		view_position: (*view_position).into(),
 		aspect_ratio: image_size.x as f32/image_size.y as f32,
@@ -109,13 +114,14 @@ fn paint(&mut self, context@Context{memory_allocator, ..}: &Context, commands: &
 	commands.bind_vertex_buffers(0, vertices.clone())?;
 	unsafe{commands.draw_indexed(grid.len() as _, 1, 0, 0, 0)}?;
 	commands.end_rendering()?;
-	*yaw += std::f32::consts::PI/60.;
+	*yaw += std::f32::consts::PI/6./60.;
 	Ok(())
 }
 fn event(&mut self, _size: size, _context: &mut ui::EventContext, _event: &ui::Event) -> Result<bool> { Ok(true/*Keep repainting*/) }
 }
 
 fn main() -> Result {
-	let path = std::env::args().skip(1).next().unwrap_or("data/DTM_R.tif.tif.exr".to_owned());
-	ui::run(&path.clone(), Box::new(move |context| Ok(Box::new(time("init", || App::new(context, f32(path)?))?))))
+	let ground = std::env::args().skip(1).next().unwrap_or("data/DTM_R.tif.tif.exr".to_owned());
+	let water = std::env::args().skip(2).next().unwrap_or("data/DTM_GEWAESSER_R.tif.tif.exr".to_owned());
+	ui::run(&ground.clone(), Box::new(move |context| Ok(Box::new(time("init", || App::new(context, f32(ground)?, f32(water)?))?))))
 }

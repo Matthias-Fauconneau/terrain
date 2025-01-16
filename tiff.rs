@@ -7,7 +7,13 @@ tiff='*'
 bytemuck={version='*',features=['extern_crate_alloc']}
 image={git='https://github.com/Matthias-Fauconneau/image', features=['exr']}
 [profile.dev]
-opt-level = 1
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
 ---
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -27,7 +33,7 @@ fn tiff(path: impl AsRef<std::path::Path>, cache: Option<impl AsRef<std::path::P
 		let strip_height = tiff.chunk_dimensions().1;
 		let mut image = vec![0f32; (((size.y+strip_height-1)/strip_height*strip_height)*stride) as usize].into_boxed_slice();
 		for (strip_index, y) in (0..strip_offsets.len()).zip(std::iter::successors(Some(0), |&y| Some(y+strip_height))) {
-			print!(".");
+			print!("."); std::io::Write::flush(&mut std::io::stdout())?;
 			tiff.read_chunk_to_buffer(tiff::decoder::DecodingBuffer::F32(&mut image[(y*stride) as usize..]), strip_index as u32, size.x as usize)?;
 		}
 		if let Some(cache) = cache { std::fs::write(cache, bytemuck::cast_slice(&image))?; }
@@ -52,7 +58,10 @@ fn main() -> Result {
 		let image = image.slice((image.size-size)/2, size);
 		println!("downsample");
 		let image = downsample::<_,_,8>(&image);
-		for &value in &image.data { if value < 0. { assert_eq!(value, f32::MIN); } }
+		//for &value in &image.data { if value < 0. { assert_eq!(value, f32::MIN); } }
+		println!("flip");
+		let mut image = image;
+		for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
 		println!("export");
 		image::save_exr(format!("{arg}.exr"), "Altitude", &image)?;
 	}
