@@ -20,22 +20,23 @@ impl App {
 	fn new(context: &Context, height: &[f32]) -> Result<Self> {
 		let size : size = xy{x:4480, y:4240};
 		let vertex_stride = size.x;
-		let grid = buffer(context, BufferUsage::INDEX_BUFFER, ((size.y-1)*(size.x-1)*6) as usize)?;
+		let skip = 4;
+		let grid = buffer(context, BufferUsage::INDEX_BUFFER, ((size.y/skip-1)*(size.x/skip-1)*6) as usize)?;
 		{
 			let mut grid = grid.write()?;
-			let index_stride = size.x-1;
-			let start = std::time::Instant::now();
-			for y in 0..size.y-1 { for x in 0..size.x-1 {
+			let index_stride = size.x/skip-1;
+			let _start = std::time::Instant::now();
+			for y in 0..size.y/skip-1 { for x in 0..size.x/skip-1 {
 				let target = ((y*index_stride+x)*6) as usize;
-				let i0 = y*vertex_stride+x;
+				let i0 = y*skip*vertex_stride+x*skip;
 				grid[target+0] = i0;
-				grid[target+1] = i0+1;
-				grid[target+2] = i0+vertex_stride+1;
+				grid[target+1] = i0+skip;
+				grid[target+2] = i0+vertex_stride*skip+skip;
 				grid[target+3] = i0;
-				grid[target+4] = i0+vertex_stride+1;
-				grid[target+5] = i0+vertex_stride;
+				grid[target+4] = i0+vertex_stride*skip+skip;
+				grid[target+5] = i0+vertex_stride*skip;
 			}}
-			println!("{}ms", start.elapsed().as_millis());
+			//println!("{}ms", _start.elapsed().as_millis());
 		}
 		//let [Some(&min), Some(&max)] = [height.iter().filter(|&&v| v>=0.).min_by(|a,b| f32::total_cmp(a,b)), height.iter().max_by(|a,b| f32::total_cmp(a,b))] else {unreachable!()};
 		let [min, max] = [341.97717f32, 863.59375f32];
@@ -57,16 +58,16 @@ fn paint(&mut self, context/*@Context{device, memory_allocator, ..}*/: &Context,
 	let image_size = {let [x,y,_] = target.image().extent(); xy{x,y}};
 	terrain.begin_rendering(context, commands, target.clone(), &Terrain::Uniforms{
 		grid_size: (*size).into(),
-		aspect_ratio: image_size.x as f32/image_size.y as f32,
+		pitch_sincos: xy::from((std::f32::consts::PI/3.).sin_cos()).into(),
+		yaw_sincos: xy::from(yaw.sin_cos()).into(),
 		view_position: (*view_position).into(),
-		yaw_sincos: xy::from(yaw.sin_cos()).into()
+		aspect_ratio: image_size.x as f32/image_size.y as f32,
 	})?;
 	commands.bind_index_buffer(grid.clone())?;
 	commands.bind_vertex_buffers(0, height.clone())?;
 	unsafe{commands.draw_indexed(grid.len() as _, 1, 0, 0, 0)}?;
 	commands.end_rendering()?;
 	*yaw += std::f32::consts::PI/60.;
-	print!(".");
 	Ok(())
 }
 fn event(&mut self, _size: size, _context: &mut ui::EventContext, _event: &ui::Event) -> Result<bool> { Ok(true/*Keep repainting*/) }
