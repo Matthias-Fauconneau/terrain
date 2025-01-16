@@ -21,7 +21,7 @@ struct VertexOutput {
 	let ps = uniforms.pitch_sincos.x;
 	let pc = uniforms.pitch_sincos.y;
 	let p2 = vec3(p1.x, pc*p1.y - ps*p1.z, ps*p1.y + pc*p1.z);
-	return VertexOutput(vec4(p2.xy, (p2.z+1.)/2. /*Vulkan clips z/w < 0*/, 1.), vec3(/*vertex.height**/vertex.NdotL));
+	return VertexOutput(vec4(p2.xy, (p2.z+sqrt(2.))/(2.*sqrt(2.)) /*Vulkan clips z/w < 0*/, 1.), vec3(/*vertex.height**/vertex.NdotL));
 }
 
 @fragment fn fragment(vertex_output: VertexOutput) -> @location(0) vec4<f32> {
