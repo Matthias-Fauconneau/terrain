@@ -50,8 +50,8 @@ pub fn downsample<T: Copy+Into<f32>, D: core::ops::Deref<Target=[T]>, const FACT
 }
 
 fn main() -> Result {
-	for arg in std::env::args().skip(1) {
-		let image = tiff(&arg, Some(format!("{arg}.f32")))?;
+	for path in std::env::args().skip(1) {
+		let image = tiff(&arg, Some(format!("{path}.f32")))?;
 		let size = 8192.into();
 		let image = image.slice((image.size-size)/2, size);
 		println!("downsample");
@@ -60,7 +60,7 @@ fn main() -> Result {
 		let mut image = image;
 		for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
 		println!("export");
-		image::save_exr(format!("{arg}.exr"), "Altitude", &image)?;
+		image::save_exr(format!("{path}.exr"), "Altitude", &image)?;
 	}
 	Ok(())
 }
