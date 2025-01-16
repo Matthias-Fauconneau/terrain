@@ -1,7 +1,7 @@
 #![feature(slice_from_ptr_range)] // shader
 #![allow(incomplete_features)]#![feature(inherent_associated_types)] // shader uniforms
-use {ui::{Result, xy, size, int2}, vector::vec2};
-use {std::sync::Arc, ui::vulkan::{Context, Commands, ImageView, buffer, from_iter, Subbuffer, BufferUsage, BufferContents, Vertex}};
+use {ui::{default, Result, xy, size, int2}, vector::vec2};
+use {std::sync::Arc, ui::vulkan::{Context, Commands, Format, Image, ImageUsage, ImageCreateInfo, ImageView, buffer, from_iter, Subbuffer, BufferUsage, BufferContents, Vertex}};
 
 #[derive(Clone, Copy, BufferContents, Vertex)] #[repr(C)] pub struct Height { #[format(R32_SFLOAT)] pub height: f32 }
 
@@ -45,18 +45,24 @@ impl App {
 			terrain: Terrain::new(context)?,
 			size,
 			grid,
-			height: from_iter(context, BufferUsage::VERTEX_BUFFER, height.iter().map(|h| Height{height: (h-min)/(max-min)}))?,
+			height: from_iter(context, BufferUsage::VERTEX_BUFFER, height.iter().map(|h| Height{height: (h-min)/(max-min)/2.}))?,
 			view_position: xy{x: 0., y: 0.}, yaw: 0.
 		})
 	}
 }
 
 impl ui::Widget for App {
-fn paint(&mut self, context/*@Context{device, memory_allocator, ..}*/: &Context, commands: &mut Commands, target: Arc<ImageView>, _: size, _: int2) -> Result<()> {
+fn paint(&mut self, context@Context{memory_allocator, ..}: &Context, commands: &mut Commands, target: Arc<ImageView>, _: size, _: int2) -> Result<()> {
 	let Self{terrain, size, grid, height, view_position, yaw} = self;
 	//*view_position += rotate(-*yaw, control);
 	let image_size = {let [x,y,_] = target.image().extent(); xy{x,y}};
-	terrain.begin_rendering(context, commands, target.clone(), &Terrain::Uniforms{
+	let depth = Image::new(memory_allocator.clone(), ImageCreateInfo{
+		format: Format::D16_UNORM,
+		extent: target.image().extent(),
+		usage: ImageUsage::DEPTH_STENCIL_ATTACHMENT,
+		..default()
+	}, default())?;
+	terrain.begin_rendering(context, commands, target.clone(), ImageView::new_default(depth)?, &Terrain::Uniforms{
 		grid_size: (*size).into(),
 		pitch_sincos: xy::from((std::f32::consts::PI/3.).sin_cos()).into(),
 		yaw_sincos: xy::from(yaw.sin_cos()).into(),
