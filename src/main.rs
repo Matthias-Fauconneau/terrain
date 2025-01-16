@@ -1,7 +1,8 @@
 #![feature(slice_from_ptr_range)] // shader
 #![allow(incomplete_features)]#![feature(inherent_associated_types)] // shader uniforms
 use {ui::{default, Result, xy, size, int2}, vector::vec2};
-use {std::sync::Arc, ui::vulkan::{Context, Commands, Format, Image, ImageUsage, ImageCreateInfo, ImageView, buffer, from_iter, Subbuffer, BufferUsage, BufferContents, Vertex}};
+use std::sync::Arc;
+use ui::vulkan::{Context, Commands, Format, Image, ImageUsage, ImageCreateInfo, ImageView, buffer, from_iter, Subbuffer, BufferUsage, BufferContents, Vertex};
 
 #[derive(Clone, Copy, BufferContents, Vertex)] #[repr(C)] pub struct Height { #[format(R32_SFLOAT)] pub height: f32 }
 
@@ -21,21 +22,28 @@ impl App {
 		let size : size = xy{x:4480, y:4240};
 		let vertex_stride = size.x;
 		let skip = 4;
-		let grid = buffer(context, BufferUsage::INDEX_BUFFER, ((size.y/skip-1)*(size.x/skip-1)*6) as usize)?;
+		let mut cell_count = 0;
+		for y in 0..size.y/skip-1 { for x in 0..size.x/skip-1 {
+			let i0 = y*skip*vertex_stride+x*skip;
+			if [0, skip, vertex_stride*skip, vertex_stride*skip+skip].iter().all(|di| height[(i0+di) as usize] > 0.) { cell_count += 1; }
+		}}
+		let grid = buffer(context, BufferUsage::INDEX_BUFFER, (cell_count*6) as usize)?;
 		{
 			let mut grid = grid.write()?;
-			let index_stride = size.x/skip-1;
-			let _start = std::time::Instant::now();
+			let mut target = 0;
 			for y in 0..size.y/skip-1 { for x in 0..size.x/skip-1 {
-				let target = ((y*index_stride+x)*6) as usize;
 				let i0 = y*skip*vertex_stride+x*skip;
-				grid[target+0] = i0;
-				grid[target+1] = i0+skip;
-				grid[target+2] = i0+vertex_stride*skip+skip;
-				grid[target+3] = i0;
-				grid[target+4] = i0+vertex_stride*skip+skip;
-				grid[target+5] = i0+vertex_stride*skip;
+				if [0, skip, vertex_stride*skip, vertex_stride*skip+skip].iter().all(|di| height[(i0+di) as usize] > 0.) {
+					grid[target+0] = i0;
+					grid[target+1] = i0+skip;
+					grid[target+2] = i0+vertex_stride*skip+skip;
+					grid[target+3] = i0;
+					grid[target+4] = i0+vertex_stride*skip+skip;
+					grid[target+5] = i0+vertex_stride*skip;
+					target += 6;
+				}
 			}}
+			assert!(target == grid.len());
 			//println!("{}ms", _start.elapsed().as_millis());
 		}
 		//let [Some(&min), Some(&max)] = [height.iter().filter(|&&v| v>=0.).min_by(|a,b| f32::total_cmp(a,b)), height.iter().max_by(|a,b| f32::total_cmp(a,b))] else {unreachable!()};

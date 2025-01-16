@@ -8,7 +8,7 @@ struct VertexOutput {
 
 @vertex fn vertex(@builtin(vertex_index) vertex_index: u32, @location(0) height: f32) -> VertexOutput {
 	let xy = vec2(f32(vertex_index % uniforms.grid_size.x), f32(vertex_index / uniforms.grid_size.x)) / vec2<f32>(uniforms.grid_size);
-	let p = vec3(vec3(xy, height) * 2. - 1.);
+	let p = vec3(vec3(xy, -height) * 2. - 1.);
 	let p0 = p.xy - uniforms.view_position;
 	let s = uniforms.yaw_sincos.x;
 	let c = uniforms.yaw_sincos.y;
