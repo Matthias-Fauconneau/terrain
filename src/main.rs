@@ -1,26 +1,41 @@
 #![feature(slice_from_ptr_range)] // shader
 #![allow(incomplete_features)]#![feature(inherent_associated_types)] // shader uniforms
-use {ui::{default, Result, xy, size, int2}, vector::vec2};
+#![allow(non_snake_case)] // NdotL
+use {ui::{default, Result}, vector::{xy, size, int2, vec2, xyz, cross, dot}, ui::Image};
 use std::sync::Arc;
-use ui::vulkan::{Context, Commands, Format, Image, ImageUsage, ImageCreateInfo, ImageView, buffer, from_iter, Subbuffer, BufferUsage, BufferContents, Vertex};
+use ui::vulkan::{self, Context, Commands, Format, ImageUsage, ImageCreateInfo, ImageView, buffer, from_iter, Subbuffer, BufferUsage, BufferContents, Vertex};
 
-#[derive(Clone, Copy, BufferContents, Vertex)] #[repr(C)] pub struct Height { #[format(R32_SFLOAT)] pub height: f32 }
+#[derive(Clone, Copy, BufferContents, Vertex)] #[repr(C)] pub struct TerrainVertex { 
+	#[format(R32_SFLOAT)] pub height: f32,
+	#[format(R32_SFLOAT)] pub NdotL: f32,
+}
 
-ui::shader!{terrain, Height, Terrain}
+ui::shader!{terrain, TerrainVertex, Terrain}
 
 struct App {
 	terrain: Terrain,
 	size: size,
 	grid: Subbuffer::<[u32]>,
 	height: Subbuffer::<[Height]>,
+	NdotL: Subbuffer::<[NdotL]>,
 	view_position: vec2,
 	yaw: f32,
 }
 
 impl App {
-	fn new(context: &Context, height: &[f32]) -> Result<Self> {
-		let size : size = xy{x:4480, y:4240};
+	fn new(context: &Context, height: Image<&[f32]>) -> Result<Self> {
+		let size = height.size;
 		let vertex_stride = size.x;
+		let NdotL = buffer(context, BufferUsage::VERTEX_BUFFER, height.data.len())?;
+		{
+			let mut NdotL = NdotL.write()?;
+			for y in 1..size.y-1 { for x in 1..size.x-1 {
+				let dx_z = (height[xy{x: x+1, y}]-height[xy{x: x-1, y}])/2.;
+				let dy_z = (height[xy{x, y: y+1}]-height[xy{x, y: y-1}])/2.;
+				let n = cross(xyz{x: 1., y: 0., z: dx_z}, xyz{x: 0., y: 1., z: dy_z});
+				NdotL[(y*vertex_stride+x) as usize] = NdotL{NdotL: dot(n, xyz{x: 0., y: 0., z: 1.})};
+			}}
+		}
 		let skip = 4;
 		let mut cell_count = 0;
 		for y in 0..size.y/skip-1 { for x in 0..size.x/skip-1 {
@@ -53,7 +68,8 @@ impl App {
 			terrain: Terrain::new(context)?,
 			size,
 			grid,
-			height: from_iter(context, BufferUsage::VERTEX_BUFFER, height.iter().map(|h| Height{height: (h-min)/(max-min)/2.}))?,
+			height: from_iter(context, BufferUsage::VERTEX_BUFFER, height.data.iter().map(|h| Height{height: (h-min)/(max-min)/2.}))?,
+			NdotL,
 			view_position: xy{x: 0., y: 0.}, yaw: 0.
 		})
 	}
@@ -61,10 +77,10 @@ impl App {
 
 impl ui::Widget for App {
 fn paint(&mut self, context@Context{memory_allocator, ..}: &Context, commands: &mut Commands, target: Arc<ImageView>, _: size, _: int2) -> Result<()> {
-	let Self{terrain, size, grid, height, view_position, yaw} = self;
+	let Self{terrain, size, grid, height, NdotL, view_position, yaw} = self;
 	//*view_position += rotate(-*yaw, control);
 	let image_size = {let [x,y,_] = target.image().extent(); xy{x,y}};
-	let depth = Image::new(memory_allocator.clone(), ImageCreateInfo{
+	let depth = vulkan::Image::new(memory_allocator.clone(), ImageCreateInfo{
 		format: Format::D16_UNORM,
 		extent: target.image().extent(),
 		usage: ImageUsage::DEPTH_STENCIL_ATTACHMENT,
@@ -72,13 +88,14 @@ fn paint(&mut self, context@Context{memory_allocator, ..}: &Context, commands: &
 	}, default())?;
 	terrain.begin_rendering(context, commands, target.clone(), ImageView::new_default(depth)?, &Terrain::Uniforms{
 		grid_size: (*size).into(),
-		pitch_sincos: xy::from((std::f32::consts::PI/3.).sin_cos()).into(),
+		pitch_sincos: xy::from((std::f32::consts::PI/4.).sin_cos()).into(),
 		yaw_sincos: xy::from(yaw.sin_cos()).into(),
 		view_position: (*view_position).into(),
 		aspect_ratio: image_size.x as f32/image_size.y as f32,
 	})?;
 	commands.bind_index_buffer(grid.clone())?;
 	commands.bind_vertex_buffers(0, height.clone())?;
+	commands.bind_vertex_buffers(1, NdotL.clone())?;
 	unsafe{commands.draw_indexed(grid.len() as _, 1, 0, 0, 0)}?;
 	commands.end_rendering()?;
 	*yaw += std::f32::consts::PI/60.;
@@ -91,6 +108,6 @@ fn main() -> Result {
 	let name = format!("{}.f32", std::env::args().skip(1).next().unwrap_or("data/DTM_R.tif.tif.exr".to_owned()));
 	ui::run(&name.clone(), Box::new(move |context| {
 		let height = std::env::current_dir()?.ancestors().find_map(|root| ui::time!(std::fs::read(root.join(&name))).ok() ).expect(&name);
-		Ok(Box::new(ui::time!(App::new(context, bytemuck::cast_slice(&height)))?))
+		Ok(Box::new(ui::time!(App::new(context, Image::new(xy{x:4480, y:4240}, bytemuck::cast_slice(&height))))?))
 	}))
 }
