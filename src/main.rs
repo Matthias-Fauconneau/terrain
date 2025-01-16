@@ -33,21 +33,24 @@ impl App {
 	fn new(context: &Context, ground: Image<impl AsRef<[f32]>>, water: Image<impl AsRef<[f32]>>) -> Result<Self> {
 		let ground = ground.as_ref();
 		let water = water.as_ref();
-		
 		let ref height = water; // Single terrain for water/ground (`water` has ground altitude for points without water)
 		let size = height.size;
+		let meters_per_pixel = 8.; // 8x downsample from 1m resolution original = 8m/px
+		let size_in_meters = {assert_eq!(size.x, size.y); size.x as f32}*meters_per_pixel;
+
 		let vertex_stride = size.x;
 		let vertices = buffer(context, BufferUsage::VERTEX_BUFFER, height.data.len())?;
 		{
-			let [min, max] = minmax(height.data);
+			let [min, _max] = minmax(height.data);
+			let meters_to_normalized = 2./size_in_meters; // shader scales xy integer coordinates [0..`size`] to screen width (=2). i.e: = i/size*2-1
 
 			let mut vertices = vertices.write()?;
 			for y in 1..size.y-1 { for x in 1..size.x-1 {
-				let dx_z = (height[xy{x: x+1, y}]-height[xy{x: x-1, y}])/2.;
-				let dy_z = (height[xy{x, y: y+1}]-height[xy{x, y: y-1}])/2.;
+				let dx_z = (height[xy{x: x+1, y}]-height[xy{x: x-1, y}])/(2.*meters_per_pixel);
+				let dy_z = (height[xy{x, y: y+1}]-height[xy{x, y: y-1}])/(2.*meters_per_pixel);
 				let n = normalize(cross(xyz{x: 1., y: 0., z: dx_z}, xyz{x: 0., y: 1., z: dy_z}));
 				vertices[(y*vertex_stride+x) as usize] = TerrainVertex{
-					height: (height[xy{x,y}]-min)/(max-min)/4.,
+					height: meters_to_normalized*(height[xy{x,y}]-min),
 					NdotL: dot(n, xyz{x: 0., y: 0., z: 1.}),
 					water: if water[xy{x,y}] > ground[xy{x,y}] { 1. } else { 0. }
 				};
@@ -104,8 +107,8 @@ fn paint(&mut self, context@Context{memory_allocator, ..}: &Context, commands: &
 		..default()
 	}, default())?;
 	terrain.begin_rendering(context, commands, target.clone(), ImageView::new_default(depth)?, &Terrain::Uniforms{
-		grid_size: (*size).into(),
-		pitch_sincos: xy::from((-std::f32::consts::PI/4.).sin_cos()).into(),
+		grid_size: {assert_eq!(size.x, size.y); size.x},
+		pitch_sincos: xy::from((-std::f32::consts::PI/3.).sin_cos()).into(),
 		yaw_sincos: xy::from(yaw.sin_cos()).into(),
 		view_position: (*view_position).into(),
 		aspect_ratio: image_size.x as f32/image_size.y as f32,

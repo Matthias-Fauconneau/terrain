@@ -13,7 +13,6 @@ debug-assertions = false
 overflow-checks = false
 panic = 'unwind'
 incremental = false
-codegen-units = 16
 ---
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -53,12 +52,10 @@ pub fn downsample<T: Copy+Into<f32>, D: core::ops::Deref<Target=[T]>, const FACT
 fn main() -> Result {
 	for arg in std::env::args().skip(1) {
 		let image = tiff(&arg, Some(format!("{arg}.f32")))?;
-		//for &value in &image.data { if value < 0. { assert_eq!(value, f32::MIN); } }
 		let size = 8192.into();
 		let image = image.slice((image.size-size)/2, size);
 		println!("downsample");
 		let image = downsample::<_,_,8>(&image);
-		//for &value in &image.data { if value < 0. { assert_eq!(value, f32::MIN); } }
 		println!("flip");
 		let mut image = image;
 		for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
