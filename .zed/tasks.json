@@ -1,6 +1,7 @@
 [{
 	"label": "Run (O1)",
 	"command": "cargo run --release",
+	//"env": {"RUSTFLAGS": "-Zmacro-backtrace"},
 	"use_new_terminal": false,
 	"allow_concurrent_runs": false,
 	"reveal": "always",

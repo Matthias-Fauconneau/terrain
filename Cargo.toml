@@ -23,5 +23,14 @@ vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano' } # drm modifier
 [patch.'https://github.com/Matthias-Fauconneau/ui']
 ui={ path='../ui' }
 
-#[patch.'https://github.com/Matthias-Fauconneau/vulkano-spirv'] # WIP SPIR-V to Rust interface
-#vulkano-spirv={ path='../vulkano-spirv' }
+[patch.'https://github.com/Matthias-Fauconneau/vulkano-spirv'] # WIP SPIR-V to Rust interface
+vulkano-spirv={ path='../vulkano-spirv' }
+
+[patch.'https://github.com/Matthias-Fauconneau/image']
+image={ path='../image' }
+
+[patch.'https://github.com/Matthias-Fauconneau/vector']
+vector={ path='../vector' }
+
+[patch.'https://github.com/Matthias-Fauconneau/num']
+num={ path='../num' }

@@ -2,6 +2,7 @@
 ---cargo
 package={edition='2024'}
 [dependencies]
+vector='*'
 bytemuck={version='*',features=['extern_crate_alloc']}
 [profile.dev]
 opt-level = 1
@@ -22,11 +23,12 @@ fn main() -> Result {
 		println!("read");
 		let trees = std::fs::read(&path)?;
 		println!("parse {}", trees.len());
-		let trees = std::str::from_utf8(&trees)?.lines().map(|line| {
+		vector!(2 LV95 T T, E N, E N);
+		let trees = Box::from_iter(std::str::from_utf8(&trees)?.lines().map(|line| {
 			let [_id, min_x, max_x, min_y, max_y] = from_iter(line.split('\t'));
 			let [min_x, max_x, min_y, max_y] = [min_x, max_x, min_y, max_y].map(|value| value.parse::<f32>().unwrap());
-			[(min_x+max_x)/2., (min_y+max_y)/2.]
-		}).collect::<Box<[[f32; 2]]>>();
+			LV95{E: (min_x+max_x)/2., N: (min_y+max_y)/2.}
+		}));
 		println!("write {}", trees.len());
 		std::fs::write(format!("{path}.f32"), bytemuck::cast_slice(&trees))?;
 	}
