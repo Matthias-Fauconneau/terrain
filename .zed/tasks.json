@@ -1,7 +1,16 @@
 [{
-	"label": "Run (O1)",
+	"label": "Terrain",
 	"command": "cargo run --release",
-	//"env": {"RUSTFLAGS": "-Zmacro-backtrace"},
+	"use_new_terminal": false,
+	"allow_concurrent_runs": false,
+	"reveal": "always",
+	"reveal_target": "dock",
+	"hide": "never",
+	"show_summary": false,
+	"show_command": false
+},{
+	"label": "DTM",
+	"command": "./tiff.rs data/DTM_R.tif.tif",
 	"use_new_terminal": false,
 	"allow_concurrent_runs": false,
 	"reveal": "always",

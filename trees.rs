@@ -2,7 +2,7 @@
 ---cargo
 package={edition='2024'}
 [dependencies]
-vector='*'
+vector={ git='https://github.com/Matthias-Fauconneau/vector' }
 bytemuck={version='*',features=['extern_crate_alloc']}
 [profile.dev]
 opt-level = 1
@@ -17,7 +17,9 @@ fn from_iter<I: Iterator,  const N: usize>(mut iter: I) -> [I::Item; N] where I:
 	assert!(iter.next().is_none()); 
 	chunk 
 }
-	
+
+use vector::vector;
+
 fn main() -> Result {
 	for path in std::env::args().skip(1) {
 		println!("read");

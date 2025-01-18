@@ -2,10 +2,11 @@
 ---cargo
 package={edition='2024'}
 [dependencies]
-memmap={version='*', package='memmap2'}
-tiff='*'
 bytemuck={version='*',features=['extern_crate_alloc']}
+memmap={version='*', package='memmap2'}
+vector={git='https://github.com/Matthias-Fauconneau/vector'}
 image={git='https://github.com/Matthias-Fauconneau/image', features=['exr']}
+tiff='*'
 [profile.dev]
 opt-level = 3
 debug = false
@@ -18,7 +19,7 @@ incremental = false
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
 
-use image::{Image, xy};
+use {vector::{vector, MinMax, vec2}, image::{Image, xy}};
 
 fn tiff(path: impl AsRef<std::path::Path>, cache: Option<impl AsRef<std::path::Path>>) -> Result<Image<Box<[f32]>>> {
 	let tiff = unsafe{memmap::Mmap::map(&std::fs::File::open(path)?)?};
@@ -51,14 +52,22 @@ pub fn downsample<T: Copy+Into<f32>, D: core::ops::Deref<Target=[T]>, const FACT
 
 fn main() -> Result {
 	for path in std::env::args().skip(1) {
-		let image = tiff(&arg, Some(format!("{path}.f32")))?;
+		let image = tiff(&path, Some(format!("{path}.f32")))?;
+		vector!(2 LV95 T T, E N, E N);
+		let MinMax{min, max} = MinMax{min: LV95{E: 2676224.253, N: 1241584.5}, max: LV95{E: 2689666.253, N: 1254306.5}};
 		let size = 8192.into();
+		let vec2 = |p| vec2::from( <[f32;2]>::from(p) );
+		let LV95 = |p| LV95::from( <[f32;2]>::from(p) );
+		let min = min + LV95(vec2::from((image.size-size)/2)*vec2(max-min)/vec2::from(image.size));
+		let max = min + LV95(vec2::from(size)*vec2(max-min)/vec2::from(image.size));
+		println!("{min:?} {max:?}");
 		let image = image.slice((image.size-size)/2, size);
 		println!("downsample");
 		let image = downsample::<_,_,8>(&image);
 		println!("flip");
 		let mut image = image;
-		for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
+		//for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
+		//for y in 0..image.size.y { for x in 0..image.size.x/2 { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x: image.size.x-1-x, y}).unwrap()) } }
 		println!("export");
 		image::save_exr(format!("{path}.exr"), "Altitude", &image)?;
 	}

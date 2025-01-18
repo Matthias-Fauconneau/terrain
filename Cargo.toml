@@ -7,7 +7,7 @@ num={ git='https://github.com/Matthias-Fauconneau/num' }
 vector={ git='https://github.com/Matthias-Fauconneau/vector' }
 image={ git='https://github.com/Matthias-Fauconneau/image', features = ['exr']}
 ui={ git='https://github.com/Matthias-Fauconneau/ui' }
-vulkano={ git='https://github.com/vulkano-rs/vulkano', default-features=false } # same as ui (which needs drm modifier from git version)
+vulkano={ git='https://github.com/vulkano-rs/vulkano', default-features=false, features=['macros'] } # same version as ui (which needs drm modifier fix from git fork version)
 vulkano-spirv={ git='https://github.com/Matthias-Fauconneau/vulkano-spirv' }
 
 [build-dependencies]
@@ -22,15 +22,3 @@ vulkano={ git='https://github.com/Matthias-Fauconneau/vulkano' } # drm modifier
 
 [patch.'https://github.com/Matthias-Fauconneau/ui']
 ui={ path='../ui' }
-
-[patch.'https://github.com/Matthias-Fauconneau/vulkano-spirv'] # WIP SPIR-V to Rust interface
-vulkano-spirv={ path='../vulkano-spirv' }
-
-[patch.'https://github.com/Matthias-Fauconneau/image']
-image={ path='../image' }
-
-[patch.'https://github.com/Matthias-Fauconneau/vector']
-vector={ path='../vector' }
-
-[patch.'https://github.com/Matthias-Fauconneau/num']
-num={ path='../num' }
