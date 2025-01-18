@@ -23,7 +23,7 @@ impl Terrain {
 				let dx_z = (water[xy{x: x+1, y}]-water[xy{x: x-1, y}])/(2.*meters_per_pixel);
 				let dy_z = (water[xy{x, y: y+1}]-water[xy{x, y: y-1}])/(2.*meters_per_pixel);
 				let n = normalize(cross(xyz{x: 1., y: 0., z: dx_z}, xyz{x: 0., y: 1., z: dy_z}));
-				vertices[((size.y-1-y)*vertex_stride+x) as usize] = terrain::Vertex{
+				vertices[(y*vertex_stride+x) as usize] = terrain::Vertex{
 					z: z(water[xy{x,y}]),
 					NdotL: dot(n, xyz{x: 0., y: 0., z: 1.}),
 					water: if water[xy{x,y}] > ground[xy{x,y}] { 1. } else { 0. } // Single terrain for water/ground (`water` has ground altitude for points without water)

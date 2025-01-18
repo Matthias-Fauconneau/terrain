@@ -68,6 +68,9 @@ fn main() -> Result {
 		let image = image.slice((image.size-size)/2, size);
 		println!("downsample");
 		let image = downsample::<_,_,8>(&image);
+		println!("flip");
+		let mut image = image;
+		for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
 		println!("export");
 		image::save_exr(format!("{path}.exr"), "Altitude", &image)?;
 	}

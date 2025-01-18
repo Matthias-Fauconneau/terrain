@@ -30,10 +30,9 @@ impl Trees {
 			pass: trees::Pass::new(context, true)?,
 			vertices: from_iter(context, BufferUsage::STORAGE_BUFFER, trees.iter().map(|p| {
 				let normalized_cooordinates = vec2((p-min)/(max-min));
-				{let xy{x,y} = uint2::from(normalized_cooordinates*vec2::from(plot.size)); let y = plot.size.y-1-y; if let Some(pixel) = plot.get_mut(xy{x,y}) { *pixel += 1f32; }}
+				{let p = uint2::from(normalized_cooordinates*vec2::from(plot.size)); if let Some(pixel) = plot.get_mut(p) { *pixel += 1f32; }}
 				let xy{x,y} = 2.* normalized_cooordinates - vec2::from(1.);
-				[x, y, z(bilinear_sample(ground, normalized_cooordinates*vec2::from(ground.size-uint2::from(1)))), /*pad:*/0.]
-				//[x, y, z(ground[uint2::from(normalized_cooordinates*vec2::from(ground.size))]), /*pad:*/0.]
+				[x, y, z(bilinear_sample(ground, normalized_cooordinates*vec2::from(ground.size-uint2::from(1)))+1.), /*pad:*/0.]
 			}))?,
 			tree_size: 1.*meters_to_normalized,
 		})
