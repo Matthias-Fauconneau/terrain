@@ -10,7 +10,17 @@
 	"show_command": false
 },{
 	"label": "DTM",
-	"command": "./tiff.rs data/DTM_R.tif.tif",
+	"command": "./tiff.rs data/DTM_R.tif.tif data/DTM_GEWAESSER_R.tif.tif",
+	"use_new_terminal": false,
+	"allow_concurrent_runs": false,
+	"reveal": "always",
+	"reveal_target": "dock",
+	"hide": "never",
+	"show_summary": false,
+	"show_command": false
+},{
+	"label": "Multiband",
+	"command": "./multiband.rs data/BODENBEDECKUNG_R.tif.tif",
 	"use_new_terminal": false,
 	"allow_concurrent_runs": false,
 	"reveal": "always",

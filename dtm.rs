@@ -24,7 +24,7 @@ use {vector::{vector, MinMax, vec2}, image::{Image, xy}};
 
 fn tiff(path: impl AsRef<std::path::Path>, cache: Option<impl AsRef<std::path::Path>>) -> Result<Image<Box<[f32]>>> {
 	let tiff = unsafe{memmap::Mmap::map(&std::fs::File::open(path)?)?};
-	let mut tiff = tiff::decoder::Decoder::new(std::io::Cursor::new(&*tiff))?.with_limits(tiff::decoder::Limits::unlimited());    
+	let mut tiff = tiff::decoder::Decoder::new(std::io::Cursor::new(&*tiff))?;
 	let size = {let (x,y) = tiff.dimensions()?; xy{x: x as u32,y: y as _}};
 	println!("{size}");
 	let image = if cache.as_ref().is_some_and(|cache| std::fs::exists(cache).unwrap()) { bytemuck::pod_collect_to_vec(&std::fs::read(cache.unwrap())?).into_boxed_slice() }
