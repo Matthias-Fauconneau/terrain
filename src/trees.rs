@@ -15,8 +15,7 @@ impl Trees {
 		vector!(2 LV95 T T, E N, E N);
 		let trees = bytemuck::cast_slice::<_, LV95<f32>>(&trees);
 		let vec2 = |p| vec2::from( <[f32;2]>::from(p) );
-		let min = LV95{E: 78849.25, N: 43849.5};
-		let MinMax{min, max} = MinMax{min, max: min+LV95::from(8192.)};
+		let MinMax{min, max} = {let min = LV95{E: 78849.25, N: 43849.5}; MinMax{min, max: min+LV95::from(8192.)}};
 		let trees = trees.into_iter().filter_map(|p| {
 			let image_cooordinates = vec2((p-min)/(max-min));
 			let p@xy{x,y} = 2.* image_cooordinates - vec2::from(1.);

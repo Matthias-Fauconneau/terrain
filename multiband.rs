@@ -50,7 +50,8 @@ fn main() -> Result {
 		vector!(2 LV95 T T, E N, E N);
 		let vec2 = |p| vec2::from(<[f32;2]>::from(p));
 		let MinMax{min, max} = MinMax{min: LV95{E: 76000f32, N: 41000.}, max: LV95{E: 89926.4, N: 54926.4}};
-		let dtm = MinMax{min: LV95{E: 76224.253, N: 41584.5}, max: LV95{E: 89666.253, N: 54306.5}};
+		//let dtm = MinMax{min: LV95{E: 76224.253, N: 41584.5}, max: LV95{E: 89666.253, N: 54306.5}}; // Original
+		let dtm = {let min = LV95{E: 78849.25, N: 43849.5}; MinMax{min, max: min+LV95::from(8192.)}}; // Cropped
 		let scale = vec2::from(image.size)/vec2(max-min);
 		let image = image.crop(MinMax{min: int2::from(scale*vec2(dtm.min-min)), max: int2::from(scale*vec2(dtm.max-min))}); // /!\ rounding ~1m
 		println!("downsample");

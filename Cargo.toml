@@ -5,7 +5,7 @@ fehler='*'
 bytemuck='*'
 num={ git='https://github.com/Matthias-Fauconneau/num' }
 vector={ git='https://github.com/Matthias-Fauconneau/vector' }
-image={ git='https://github.com/Matthias-Fauconneau/image', features = ['exr']}
+image={ git='https://github.com/Matthias-Fauconneau/image', features = ['io','exr']}
 ui={ git='https://github.com/Matthias-Fauconneau/ui' }
 vulkano={ git='https://github.com/vulkano-rs/vulkano', default-features=false, features=['macros'] } # same version as ui (which needs drm modifier fix from git fork version)
 vulkano-spirv={ git='https://github.com/Matthias-Fauconneau/vulkano-spirv' }
