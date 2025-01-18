@@ -20,16 +20,17 @@ impl Trees {
 		vector!(2 LV95 T T, E N, E N);
 		let trees = bytemuck::cast_slice::<_, LV95<f32>>(&trees);
 		let vec2 = |p| vec2::from( <[f32;2]>::from(p) );
-		let MinMax{min, max} = MinMax{min: LV95{E: 2678849.3, N: 1243849.5}, max: LV95{ E: 2685441.5, N: 1250583.}};
+		let min = LV95{E: 78849.25, N: 43849.5};
+		let MinMax{min, max} = MinMax{min, max: min+LV95::from(8192.)};
 		let mut plot = DropGuard{
-			value: Image::<Box<[f32]>>::zero(xy{x: 2400, y: 2400}),
+			value: Image::<Box<[f32]>>::zero(xy{x: 1024, y: 1024}),
 			guard: |value| image::save_exr("output/plot.exr", "Value", value).unwrap()
 		};
 		Ok(Self{
 			pass: trees::Pass::new(context, true)?,
 			vertices: from_iter(context, BufferUsage::STORAGE_BUFFER, trees.iter().map(|p| {
 				let normalized_cooordinates = vec2((p-min)/(max-min));
-				{let p = uint2::from(normalized_cooordinates*vec2::from(plot.size)); if let Some(pixel) = plot.get_mut(p) { *pixel += 1f32;}}
+				{let xy{x,y} = uint2::from(normalized_cooordinates*vec2::from(plot.size)); let y = plot.size.y-1-y; if let Some(pixel) = plot.get_mut(xy{x,y}) { *pixel += 1f32; }}
 				let xy{x,y} = 2.* normalized_cooordinates - vec2::from(1.);
 				[x, y, z(bilinear_sample(ground, normalized_cooordinates*vec2::from(ground.size-uint2::from(1)))), /*pad:*/0.]
 				//[x, y, z(ground[uint2::from(normalized_cooordinates*vec2::from(ground.size))]), /*pad:*/0.]

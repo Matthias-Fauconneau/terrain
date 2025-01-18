@@ -15,6 +15,7 @@ overflow-checks = false
 panic = 'unwind'
 incremental = false
 ---
+#![allow(non_snake_case)] 
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
@@ -54,20 +55,19 @@ fn main() -> Result {
 	for path in std::env::args().skip(1) {
 		let image = tiff(&path, Some(format!("{path}.f32")))?;
 		vector!(2 LV95 T T, E N, E N);
-		let MinMax{min, max} = MinMax{min: LV95{E: 2676224.253, N: 1241584.5}, max: LV95{E: 2689666.253, N: 1254306.5}};
+		let MinMax{min, max} = MinMax{min: LV95{E: 76224.253, N: 41584.5}, max: LV95{E: 89666.253, N: 54306.5}};
 		let size = 8192.into();
-		let vec2 = |p| vec2::from( <[f32;2]>::from(p) );
-		let LV95 = |p| LV95::from( <[f32;2]>::from(p) );
-		let min = min + LV95(vec2::from((image.size-size)/2)*vec2(max-min)/vec2::from(image.size));
-		let max = min + LV95(vec2::from(size)*vec2(max-min)/vec2::from(image.size));
-		println!("{min:?} {max:?}");
+		{
+			let vec2 = |p| vec2::from( <[f32;2]>::from(p) );
+			let LV95 = |p| LV95::from( <[f32;2]>::from(p) );
+			let scale = vec2(max-min)/vec2::from(image.size);
+			let [min, size] = [min + LV95(scale*vec2::from((image.size-size)/2)), LV95(scale*vec2::from(size))];
+			let max = min+size;
+			println!("{min:?} {max:?} {size:?}");
+		}
 		let image = image.slice((image.size-size)/2, size);
 		println!("downsample");
 		let image = downsample::<_,_,8>(&image);
-		println!("flip");
-		let mut image = image;
-		//for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
-		//for y in 0..image.size.y { for x in 0..image.size.x/2 { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x: image.size.x-1-x, y}).unwrap()) } }
 		println!("export");
 		image::save_exr(format!("{path}.exr"), "Altitude", &image)?;
 	}

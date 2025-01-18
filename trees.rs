@@ -7,7 +7,8 @@ bytemuck={version='*',features=['extern_crate_alloc']}
 [profile.dev]
 opt-level = 1
 ---
-#![feature(iter_next_chunk)]//, array_try_map, iterator_try_collect)]
+#![feature(iter_next_chunk)]
+#![allow(non_snake_case)]
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
@@ -29,7 +30,7 @@ fn main() -> Result {
 		let trees = Box::from_iter(std::str::from_utf8(&trees)?.lines().map(|line| {
 			let [_id, min_x, max_x, min_y, max_y] = from_iter(line.split('\t'));
 			let [min_x, max_x, min_y, max_y] = [min_x, max_x, min_y, max_y].map(|value| value.parse::<f32>().unwrap());
-			LV95{E: (min_x+max_x)/2., N: (min_y+max_y)/2.}
+			LV95{E: (min_x+max_x)/2.-2600000., N: (min_y+max_y)/2.-1200000.}
 		}));
 		println!("write {}", trees.len());
 		std::fs::write(format!("{path}.f32"), bytemuck::cast_slice(&trees))?;
