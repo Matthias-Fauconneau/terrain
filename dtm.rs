@@ -20,7 +20,7 @@ incremental = false
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
 
-use {vector::{vector, MinMax, vec2}, image::{Image, xy}};
+use {vector::{vector, vec2, MinMax}, image::{Image, xy}};
 
 fn tiff(path: impl AsRef<std::path::Path>, cache: Option<impl AsRef<std::path::Path>>) -> Result<Image<Box<[f32]>>> {
 	let tiff = unsafe{memmap::Mmap::map(&std::fs::File::open(path)?)?};
@@ -53,6 +53,7 @@ pub fn downsample<T: Copy+Into<f32>, D: core::ops::Deref<Target=[T]>, const FACT
 
 fn main() -> Result {
 	for path in std::env::args().skip(1) {
+		println!("{path}");
 		let image = tiff(&path, Some(format!("{path}.f32")))?;
 		vector!(2 LV95 T T, E N, E N);
 		let MinMax{min, max} = MinMax{min: LV95{E: 76224.253, N: 41584.5}, max: LV95{E: 89666.253, N: 54306.5}};
