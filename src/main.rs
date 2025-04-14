@@ -16,10 +16,10 @@ struct App {
 
 impl App {
 	fn new(context: &Context, commands: &mut Commands) -> Result<Self> {
-		use image::{u8, f32, rgb, rgba8};
+		use image::{f32, rgb8, rgba8};
 		let ref ground = f32(std::env::args().skip(1).next().unwrap_or("data/DTM_R.tif.tif.exr".to_owned()))?;
 		let ref water = f32(std::env::args().skip(2).next().unwrap_or("data/DTM_GEWAESSER_R.tif.tif.exr".to_owned()))?;
-		let ref color = u8(std::env::args().skip(2).next().unwrap_or("data/BODENBEDECKUNG_R.tif.tif.png".to_owned())).map(|v| rgba8::from(rgb::from(v)));
+		let ref color = rgb8(std::env::args().skip(2).next().unwrap_or("data/BODENBEDECKUNG_R.tif.tif.png".to_owned())).map(|v| rgba8::from(v));
 		let meters_per_pixel = 8.; // 8x downsample from 1m resolution original = 8m/px
 		let vertex_grid_size_x = {assert_eq!(ground.size.x, ground.size.y); ground.size.x};
 		let size_in_meters = vertex_grid_size_x as f32 * meters_per_pixel;

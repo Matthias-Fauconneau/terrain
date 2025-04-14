@@ -24,5 +24,6 @@ struct VertexOutput {
 }
 
 @fragment fn fragment(vertex: VertexOutput) -> @location(0) vec4<f32> {
-	return mix(textureSample(image, linear, vec2(vertex.texture_coordinates.x, vertex.texture_coordinates.y)),vec4(0.,1./10.,1./5.,1.), vertex.water)*vertex.NdotL;
+	//return mix(textureSample(image, linear, vec2(vertex.texture_coordinates.x, vertex.texture_coordinates.y)),vec4(0.,1./10.,1./5.,1.), vertex.water)*vertex.NdotL;
+	return textureSample(image, linear, vec2(vertex.texture_coordinates.x, vertex.texture_coordinates.y))*vertex.NdotL;
 }

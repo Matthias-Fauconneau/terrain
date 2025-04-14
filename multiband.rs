@@ -24,7 +24,7 @@ image={path='../image'}
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
 
-use {vector::{vector, xy, vec2, int2, MinMax}, image::{Image, downsample8}};
+use {vector::{vector, xy, vec2, int2, MinMax}, image::{Image, downsample8, rgb, save_u8, save_rgb}};
 
 fn tiff(path: impl AsRef<std::path::Path>, band: usize, cache: Option<impl AsRef<std::path::Path>>) -> Result<Image<Box<[u8]>>> {
 	let tiff = unsafe{memmap::Mmap::map(&std::fs::File::open(path)?)?};
@@ -34,8 +34,7 @@ fn tiff(path: impl AsRef<std::path::Path>, band: usize, cache: Option<impl AsRef
 	println!("{size}");
 	let image = if cache.as_ref().is_some_and(|cache| std::fs::exists(cache).unwrap()) { std::fs::read(cache.unwrap())? }
 	else {
-		assert_eq!(band, 0);
-		let tiff::decoder::DecodingResult::U8(image) = tiff.read_image()? else {unimplemented!()};
+		let tiff::decoder::DecodingResult::U8(image) = tiff.read_image(band)? else {unimplemented!()};
 		if let Some(cache) = cache { std::fs::write(cache, bytemuck::cast_slice(&image))?; }
 		image
 	}.into_boxed_slice();
@@ -43,24 +42,36 @@ fn tiff(path: impl AsRef<std::path::Path>, band: usize, cache: Option<impl AsRef
 }
 
 fn main() -> Result {
-	for path in std::env::args().skip(1) {
+	for path in std::env::args().skip(1) { 
 		println!("{path}");
-		let image = tiff(&path, 0, Some(format!("{path}.0")))?;
-		println!("crop");
-		vector!(2 LV95 T T, E N, E N);
-		let vec2 = |p| vec2::from(<[f32;2]>::from(p));
-		let MinMax{min, max} = MinMax{min: LV95{E: 76000f32, N: 41000.}, max: LV95{E: 89926.4, N: 54926.4}};
-		//let dtm = MinMax{min: LV95{E: 76224.253, N: 41584.5}, max: LV95{E: 89666.253, N: 54306.5}}; // Original
-		let dtm = {let min = LV95{E: 78849.25, N: 43849.5}; MinMax{min, max: min+LV95::from(8192.)}}; // Cropped
-		let scale = vec2::from(image.size)/vec2(max-min);
-		let image = image.crop(MinMax{min: int2::from(scale*vec2(dtm.min-min)), max: int2::from(scale*vec2(dtm.max-min))}); // /!\ rounding ~1m
-		println!("downsample");
-		let image = downsample8::<8>(image);
-		println!("flip");
-		let mut image = image;
-		for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
+		let bands = [0,1,2].map(|band| {
+			println!("{band}");
+			let image = tiff(&path, band, Some(format!("{path}.{band}"))).unwrap();
+			println!("crop");
+			vector!(2 LV95 T T, E N, E N);
+			let vec2 = |p| vec2::from(<[f32;2]>::from(p));
+			let MinMax{min, max} = MinMax{min: LV95{E: 76000f32, N: 41000.}, max: LV95{E: 89926.4, N: 54926.4}};
+			//let dtm = MinMax{min: LV95{E: 76224.253, N: 41584.5}, max: LV95{E: 89666.253, N: 54306.5}}; // Original
+			let dtm = {let min = LV95{E: 78849.25, N: 43849.5}; MinMax{min, max: min+LV95::from(8192.)}}; // Cropped
+			let scale = vec2::from(image.size)/vec2(max-min);
+			let image = image.crop(MinMax{min: int2::from(scale*vec2(dtm.min-min)), max: int2::from(scale*vec2(dtm.max-min))}); // /!\ rounding ~1m
+			println!("downsample");
+			let image = downsample8::<8>(image);
+			println!("flip");
+			let mut image = image;
+			for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
+			if true {
+				println!("export");
+				let ref target = format!("{path}.{band}.png");
+				save_u8(target, &image).unwrap();
+				println!("{target}");
+			}
+			image
+		});
 		println!("export");
-		image::save_u8(format!("{path}.png"), &image)?;
+		let ref target = format!("{path}.png");
+		save_rgb(target, &Image::from_iter(bands[0].size, (0..bands[0].data.len()).map(|i| rgb::from([0,1,2].map(|c| bands[c][i])))))?;
+		println!("{target}");
 	}
 	Ok(())
 }

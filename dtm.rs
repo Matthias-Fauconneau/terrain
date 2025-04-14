@@ -20,7 +20,7 @@ incremental = false
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
 
-use {vector::{vector, vec2, MinMax}, image::{Image, xy}};
+use {vector::{vector, vec2, MinMax}, image::{Image, xy, save_exr}};
 
 fn tiff(path: impl AsRef<std::path::Path>, cache: Option<impl AsRef<std::path::Path>>) -> Result<Image<Box<[f32]>>> {
 	let tiff = unsafe{memmap::Mmap::map(&std::fs::File::open(path)?)?};
@@ -73,7 +73,9 @@ fn main() -> Result {
 		let mut image = image;
 		for y in 0..image.size.y/2 { for x in 0..image.size.x { image.data.swap(image.index(xy{x,y}).unwrap(), image.index(xy{x,y: image.size.y-1-y}).unwrap()) } }
 		println!("export");
-		image::save_exr(format!("{path}.exr"), "Altitude", &image)?;
+		let ref target = format!("{path}.exr");
+		save_exr(target, "Altitude", &image)?;
+		println!("{target}");
 	}
 	Ok(())
 }
